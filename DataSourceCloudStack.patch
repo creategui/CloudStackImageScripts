@@ -1,0 +1,115 @@
+--- /usr/lib/python2.7/dist-packages/cloudinit/DataSourceCloudStack.py.old	2012-04-11 03:54:56.000000000 +0000
++++ /usr/lib/python2.7/dist-packages/cloudinit/DataSourceCloudStack.py	2013-09-07 01:01:02.482498743 +0000
+@@ -24,6 +24,7 @@
+ from cloudinit import log
+ import cloudinit.util as util
+ from socket import inet_ntoa
++import os
+ import time
+ import boto.utils as boto_utils
+ from struct import pack
+@@ -37,20 +38,11 @@
+     def __init__(self, sys_cfg=None):
+         DataSource.DataSource.__init__(self, sys_cfg)
+         # Cloudstack has its metadata/userdata URLs located at
+-        # http://<default-gateway-ip>/latest/
+-        self.metadata_address = "http://%s/" % self.get_default_gateway()
+-
+-    def get_default_gateway(self):
+-        """ Returns the default gateway ip address in the dotted format
+-        """
+-        with open("/proc/net/route", "r") as f:
+-            for line in f.readlines():
+-                items = line.split("\t")
+-                if items[1] == "00000000":
+-                    # found the default route, get the gateway
+-                    gw = inet_ntoa(pack("<L", int(items[2], 16)))
+-                    log.debug("found default route, gateway is %s" % gw)
+-                    return gw
++        # http://<virtual-router-ip>/latest/
++        vr_addr = get_vr_address()
++        if not vr_addr:
++            raise RuntimeError("No virtual router found!")
++        self.metadata_address = "http://%s/" % (vr_addr)
+ 
+     def __str__(self):
+         return "DataSourceCloudStack"
+@@ -82,6 +74,72 @@
+     def get_availability_zone(self):
+         return self.metadata['availability-zone']
+ 
++def get_default_gateway():
++    # Returns the default gateway ip address in the dotted format.
++    lines = util.load_file("/proc/net/route").splitlines()
++    for line in lines:
++        items = line.split("\t")
++        if items[1] == "00000000":
++            # Found the default route, get the gateway
++            gw = inet_ntoa(pack("<L", int(items[2], 16)))
++            log.debug("Found default route, gateway is %s", gw)
++            return gw
++    return None
++
++
++def get_dhclient_d():
++    # find lease files directory
++    supported_dirs = ["/var/lib/dhclient", "/var/lib/dhcp"]
++    for d in supported_dirs:
++        if os.path.exists(d):
++            log.debug("Using %s lease directory", d)
++            return d
++    return None
++
++
++def get_latest_lease():
++    # find latest lease file
++    lease_d = get_dhclient_d()
++    if not lease_d:
++        return None
++    lease_files = os.listdir(lease_d)
++    latest_mtime = -1
++    latest_file = None
++    for file_name in lease_files:
++        if file_name.endswith(".lease") or file_name.endswith(".leases"):
++            abs_path = os.path.join(lease_d, file_name)
++            mtime = os.path.getmtime(abs_path)
++            if mtime > latest_mtime:
++                latest_mtime = mtime
++                latest_file = abs_path
++    return latest_file
++
++def get_vr_address():
++    # Get the address of the virtual router via dhcp leases
++    # see http://bit.ly/T76eKC for documentation on the virtual router.
++    # If no virtual router is detected, fallback on default gateway.
++    lease_file = get_latest_lease()
++    if not lease_file:
++        log.debug("No lease file found, using default gateway")
++        return get_default_gateway()
++
++    latest_address = None
++    with open(lease_file, "r") as fd:
++        for line in fd:
++            if "dhcp-server-identifier" in line:
++                words = line.strip(" ;\r\n").split(" ")
++                if len(words) > 2:
++                    dhcp = words[2]
++                    log.debug("Found DHCP identifier %s", dhcp)
++                    latest_address = dhcp
++    if not latest_address:
++        # No virtual router found, fallback on default gateway
++        log.debug("No DHCP found, using default gateway")
++        return get_default_gateway()
++    return latest_address
++
++
++
+ datasources = [
+   (DataSourceCloudStack, (DataSource.DEP_FILESYSTEM, DataSource.DEP_NETWORK)),
+ ]
+@@ -90,3 +148,5 @@
+ # return a list of data sources that match this set of dependencies
+ def get_datasource_list(depends):
+     return DataSource.list_from_depends(depends, datasources)
++
++
