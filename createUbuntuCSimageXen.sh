@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [ "$(id -u)" != "0" ]; then
+	echo "Requires running as root in order to mount."
+	exit
+fi
+
 ### Create Ubuntu 12.04.3 raw disk file for Xen from cloud-images.ubuntu.com images
 # http://cloud-images.ubuntu.com/releases/precise/release/
 
@@ -74,7 +79,7 @@ sed -i.bak 's/user: ubuntu/user: ubuntu\npassword: passw0rd\nchpasswd: { expire:
 #  previous default list is: datasource_list: [ NoCloud, ConfigDrive, OVF, MAAS ]
 echo "datasource_list: [ CloudStack ]" > etc/cloud/cloud.cfg.d/90_dpkg.cfg
 #Replace broken cloud-init CloudStack DataSource 
-test -f ../DataSourceCloudStack.py && cp ../DataSourceCloudStack.py usr/share/pyshared/cloudinit/
+test -f ../DataSourceCloudStack.patch && patch -p1 <../DataSourceCloudStack.patch
 rm usr/lib/python2.7/dist-packages/cloudinit/DataSourceCloudStack.pyc
 
 ### Enable CloudStack Password set script
@@ -94,6 +99,7 @@ mount -o bind /dev $IMG/dev
 mount -t proc /proc $IMG/proc
 mount -o bind /sys $IMG/sys
 # copy resol.conf to have DNS in chroot
+mkdir -p $IMG/run/resolvconf
 cp /run/resolvconf/resolv.conf $IMG/run/resolvconf/resolv.conf
 # copy xen guest utils -- you can get it from another instance that you have attached the 
 test -f xe-guest-utilities_6.0.2-766_amd64.deb && cp xe-guest-utilities_6.0.2-766_amd64.deb $IMG/tmp
