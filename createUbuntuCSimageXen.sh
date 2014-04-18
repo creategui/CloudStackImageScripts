@@ -27,13 +27,13 @@ VHD=`pwd`/$IMG.vhd
 
 #Download file if not already
 if [ ! -e "$FILE" ] ; then
-   echo "Downloading Cloud Image Root tar"
-   wget $LINK
-   test $? -ne 0 && fail "!!!!!!!! Download failed ($LINK)."
+	echo "Downloading Cloud Image Root tar"
+	wget $LINK
+	test $? -ne 0 && fail "!!!!!!!! Download failed ($LINK)."
 else
-   echo "Using existing Cloud Image Root tar:"
-   ls -l $FILE
-	 echo ""
+	echo "Using existing Cloud Image Root tar:"
+	ls -l $FILE
+	echo ""
 fi
 
 #create vhd file
@@ -147,12 +147,12 @@ EOF
 # Not sure what else to try to get dev and proc to unmount
 MNTS="sys dev proc"
 for MNT in $MNTS; do
-		umount -f $IMG/$MNT
-		if [ $? -ne 0 ]; then
-				sleep 5
-				echo "trying lazy: umount -l $IMG/$MNT."
-				umount -l $IMG/$MNT
-		fi
+	umount -f $IMG/$MNT
+	if [ $? -ne 0 ]; then
+		sleep 5
+		echo "trying lazy: umount -l $IMG/$MNT."
+		umount -l $IMG/$MNT
+	fi
 done
 sleep 5
 

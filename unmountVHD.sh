@@ -1,13 +1,13 @@
 #!/bin/bash
 
 fail() {
-  echo -e "\n!!!!!!!!!!: error: $?\n$1\n"
-  exit $?
+   echo -e "\n!!!!!!!!!!: error: $?\n$1\n"
+   exit $?
 }
 
 get_abs_filename() {
-  # $1 : relative filename
-  echo "$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
+   # $1 : relative filename
+   echo "$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
 }
 
 # Check for vhd-util installation
