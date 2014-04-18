@@ -3,6 +3,7 @@ CloudStackImageScripts
 
 Scripts to create Xen templates for CloudStack.
 
+<<<<<<< HEAD
 Please note that the ubuntu script has gone through a significant makeover in order to directly create a vhd.
 
 createUbuntuCSimageXen.sh
@@ -29,3 +30,5 @@ Takes a vhd file and a mount point and mounts it.
 unmountVDH.sh
 -------------
 Unmounts a vhd file.  It searches for the vhd in "tap-ctl list" and unmounts it as well as cleaning up the tap device.
+
+>>>>>>> 696b1e637bacfc977416fb47bfc64500ba50259d
